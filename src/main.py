@@ -1,3 +1,14 @@
+# =============================================================================
+# src/main.py —— Python 移植工作区的命令行入口(argparse CLI)。
+#
+# 职责:
+#   1. 注册一组子命令(summary / manifest / parity-audit / route / bootstrap 等),
+#      用于检视与操作这个镜像自 TypeScript 归档快照的移植工作区;
+#   2. main() 按子命令分发到对应的渲染/执行逻辑,返回值即进程退出码。
+#
+# 注意:本模块属于移植/一致性校验工作区,不是生产运行时;
+#       权威实现位于 rust/ Cargo workspace(rusty-claude-cli 等 crate)。
+# =============================================================================
 from __future__ import annotations
 
 import argparse
@@ -19,6 +30,7 @@ from .tools import execute_tool, get_tool, get_tools, render_tool_index
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """构建 argparse 解析器:注册全部子命令及各自参数(均镜像归档快照中的能力)。"""
     parser = argparse.ArgumentParser(description='Python porting workspace for the Claude Code rewrite effort')
     subparsers = parser.add_subparsers(dest='command', required=True)
     subparsers.add_parser('summary', help='render a Markdown summary of the Python porting workspace')
@@ -92,6 +104,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI 主入口:解析参数 → 构建移植清单 → 按子命令分发。
+
+    每个分支打印对应的 Markdown/文本输出并返回退出码;
+    未知命令走 parser.error(退出码 2)。
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
     manifest = build_port_manifest()

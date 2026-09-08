@@ -1,3 +1,14 @@
+# =============================================================================
+# src/runtime.py —— Python 移植工作区的最小 "runtime" 门面。
+#
+# 提供:
+#   * PortRuntime.route_prompt:把 prompt 按词法打分路由到镜像的命令/工具清单;
+#   * PortRuntime.bootstrap_session:拼装一次模拟运行的完整会话快照
+#     (上下文 + 环境安装报告 + 路由命中 + 命令/工具执行 + 流事件 + 持久化路径);
+#   * PortRuntime.run_turn_loop:小型的有状态多轮循环。
+#
+# 仅用于移植/一致性演示,不含真实 LLM 调用;权威实现在 rust/ workspace。
+# =============================================================================
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -15,6 +26,7 @@ from .execution_registry import build_execution_registry
 
 @dataclass(frozen=True)
 class RoutedMatch:
+    """单条路由命中:kind 为 'command' 或 'tool',score 为词法匹配得分。"""
     kind: str
     name: str
     source_hint: str
@@ -23,6 +35,7 @@ class RoutedMatch:
 
 @dataclass
 class RuntimeSession:
+    """一次模拟 runtime 会话的完整快照,可整体渲染为 Markdown 报告。"""
     prompt: str
     context: PortContext
     setup: WorkspaceSetup
@@ -87,7 +100,14 @@ class RuntimeSession:
 
 
 class PortRuntime:
+    """镜像 runtime 的核心门面:prompt 路由、会话引导与多轮循环。"""
+
     def route_prompt(self, prompt: str, limit: int = 5) -> list[RoutedMatch]:
+        """把 prompt 路由到命令/工具清单。
+
+        规则:显式斜杠命令('/xxx')优先且去重;command 与 tool 各保底取一条;
+        其余按 (score 降序, kind, name) 排序补足到 limit。
+        """
         explicit_command = self._explicit_command_match(prompt)
         tokens = {token.lower() for token in prompt.replace('/', ' ').replace('-', ' ').split() if token}
         by_kind = {
@@ -119,6 +139,7 @@ class PortRuntime:
 
     @staticmethod
     def _explicit_command_match(prompt: str) -> RoutedMatch | None:
+        """识别 prompt 首个 token 是否为显式斜杠命令;命中则返回固定 100 分的匹配。"""
         first_token = prompt.strip().split(maxsplit=1)[0] if prompt.strip() else ''
         command_name = first_token.removeprefix('/')
         if not command_name:
@@ -134,6 +155,8 @@ class PortRuntime:
         )
 
     def bootstrap_session(self, prompt: str, limit: int = 5) -> RuntimeSession:
+        """引导一次完整模拟会话:环境安装 → 路由 → 执行命令/工具 shim →
+        推断权限拒绝 → 流式与整轮提交 → 持久化 → 写入历史日志。"""
         context = build_port_context()
         setup_report = run_setup(trusted=True)
         setup = setup_report.setup
@@ -179,6 +202,8 @@ class PortRuntime:
         )
 
     def run_turn_loop(self, prompt: str, limit: int = 5, max_turns: int = 3, structured_output: bool = False) -> list[TurnResult]:
+        """跑一个有状态的多轮循环:第 1 轮用原始 prompt,
+        后续轮追加 ' [turn N]' 标记;一旦某轮 stop_reason 非 'completed' 即提前终止。"""
         engine = QueryEnginePort.from_workspace()
         engine.config = QueryEngineConfig(max_turns=max_turns, structured_output=structured_output)
         matches = self.route_prompt(prompt, limit=limit)
@@ -194,6 +219,7 @@ class PortRuntime:
         return results
 
     def _infer_permission_denials(self, matches: list[RoutedMatch]) -> list[PermissionDenial]:
+        """权限拒绝推断:Python 移植版仍对 bash 类工具保持门禁(模拟只读安全策略)。"""
         denials: list[PermissionDenial] = []
         for match in matches:
             if match.kind == 'tool' and 'bash' in match.name.lower():
@@ -201,6 +227,7 @@ class PortRuntime:
         return denials
 
     def _collect_matches(self, tokens: set[str], modules: tuple[PortingModule, ...], kind: str) -> list[RoutedMatch]:
+        """对给定模块集合逐个打分,收集得分 > 0 的命中并按 (score 降序, name) 排序。"""
         matches: list[RoutedMatch] = []
         for module in modules:
             score = self._score(tokens, module)
@@ -211,6 +238,7 @@ class PortRuntime:
 
     @staticmethod
     def _score(tokens: set[str], module: PortingModule) -> int:
+        """词法打分:token 出现在模块名/来源提示/职责描述(小写)中则各计 1 分。"""
         haystacks = [module.name.lower(), module.source_hint.lower(), module.responsibility.lower()]
         score = 0
         for token in tokens:
