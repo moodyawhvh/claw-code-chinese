@@ -1,41 +1,43 @@
-# Claw Code Usage
+> 🌐 本文档由 [ultraworkers/claw-code](https://github.com/ultraworkers/claw-code) 翻译,英文原版见原项目。(本文件超过 10000 字符,按预算翻译核心章节,个别超长 JSON 示例有删节,文末有说明。)
 
-This guide covers the current Rust workspace under `rust/` and the `claw` CLI binary. If you are brand new, make the doctor health check your first run: start `claw`, then run `/doctor`.
+# Claw Code 使用指南
 
-## Quick-start health check
+本指南覆盖 `rust/` 下当前的 Rust workspace 与 `claw` CLI 二进制。如果你是新手,请把 doctor 健康检查作为第一次运行:启动 `claw`,然后执行 `/doctor`。
 
-Run this before prompts, sessions, or automation:
+## 快速健康检查
+
+在跑 prompt、会话或自动化之前先执行:
 
 ```bash
 cd rust
 cargo build --workspace
 ./target/debug/claw
-# first command inside the REPL
+# REPL 内的第一条命令
 /doctor
 ```
 
-`/doctor` is the built-in setup and preflight diagnostic. Once you have a saved session, you can rerun it with `./target/debug/claw --resume latest /doctor`.
+`/doctor` 是内置的安装与预检诊断。保存过会话后,可以用 `./target/debug/claw --resume latest /doctor` 重新运行。
 
-## Prerequisites
+## 前置条件
 
-- Rust toolchain with `cargo`
-- One of:
-  - `ANTHROPIC_API_KEY` for direct API access
-  - `ANTHROPIC_AUTH_TOKEN` for bearer-token auth
-- Optional: `ANTHROPIC_BASE_URL` when targeting a proxy or local service
+- 带 `cargo` 的 Rust 工具链
+- 以下任一:
+  - `ANTHROPIC_API_KEY`(直连 API)
+  - `ANTHROPIC_AUTH_TOKEN`(Bearer token 认证)
+- 可选:指向代理或本地服务时设置 `ANTHROPIC_BASE_URL`
 
-## Install / build the workspace
+## 安装 / 构建 workspace
 
 ```bash
 cd rust
 cargo build --workspace
 ```
 
-The CLI binary is available at `rust/target/debug/claw` after a debug build (`rust\target\debug\claw.exe` on Windows). Make the doctor check above your first post-build step. For PowerShell-first install, release ZIP, PATH, provider-switching, and Windows/WSL notification examples, see [`docs/windows-install-release.md`](./docs/windows-install-release.md).
+debug 构建完成后,CLI 二进制位于 `rust/target/debug/claw`(Windows 上为 `rust\target\debug\claw.exe`)。构建后的第一步请做上面的 doctor 检查。PowerShell 优先的安装、release ZIP、PATH、provider 切换以及 Windows/WSL 通知示例,见 [`docs/windows-install-release.md`](./docs/windows-install-release.md)。
 
-## Quick start
+## 快速上手
 
-### First-run doctor check
+### 首次运行的 doctor 检查
 
 ```bash
 cd rust
@@ -43,93 +45,93 @@ cd rust
 /doctor
 ```
 
-Or run doctor directly with JSON output for scripting:
+也可以直接以 JSON 输出运行 doctor,便于脚本化:
 
 ```bash
 cd rust
 ./target/debug/claw doctor --output-format json
 ```
 
-**Note:** Diagnostic verbs (`doctor`, `status`, `sandbox`, `version`) support `--output-format json` for machine-readable output. Invalid suffix arguments (e.g., `--json`) are now rejected at parse time rather than falling through to prompt dispatch.
-`version --output-format json` reports structured build provenance including full `git_sha`, derived `git_sha_short`, `is_dirty`, `branch`, `commit_date`, `commit_timestamp`, `rustc_version`, runtime `executable_path`, and `binary_provenance`; JSON keeps the prose report in `human_readable` instead of duplicating it under `message`. `status --output-format json` exposes `workspace.memory_files[]` with `path`, `source`, `origin`, `scope_path`, `outside_project`, `chars`, and `contributes` for every loaded project memory file.
+**注意:** 诊断类动词(`doctor`、`status`、`sandbox`、`version`)支持 `--output-format json` 以获得机器可读输出。非法后缀参数(如 `--json`)会在解析阶段被拒绝,而不是落回 prompt 分发。
+`version --output-format json` 输出结构化的构建来源信息,包括完整 `git_sha`、派生的 `git_sha_short`、`is_dirty`、`branch`、`commit_date`、`commit_timestamp`、`rustc_version`、运行时 `executable_path` 与 `binary_provenance`;JSON 的人类可读报告放在 `human_readable` 字段,不再重复放在 `message` 里。`status --output-format json` 通过 `workspace.memory_files[]` 暴露每个已加载项目记忆文件的 `path`、`source`、`origin`、`scope_path`、`outside_project`、`chars`、`contributes`。
 
-### Initialize a repository
+### 初始化仓库
 
-Set up a new repository with `.claw/settings.json`, `.claw.json`, `.gitignore` entries, and a `CLAUDE.md` guidance file:
+为新仓库生成 `.claw/settings.json`、`.claw.json`、`.gitignore` 条目和 `CLAUDE.md` 指引文件:
 
 ```bash
 cd /path/to/your/repo
 ./target/debug/claw init
 ```
 
-Text mode (human-readable) shows artifact creation summary with project path and next steps. Idempotent — running multiple times in the same repo marks already-created files as "skipped", reports `.claw/` as "partial" when missing sub-files are materialized, and keeps `.claw/sessions/` deferred until the first successful session save.
+文本模式(人类可读)显示工件创建摘要、项目路径和后续步骤。操作是幂等的——同一仓库多次运行会把已存在的文件标记为 "skipped",缺失子文件被补齐时把 `.claw/` 报为 "partial",`.claw/sessions/` 则推迟到第一次成功保存会话时创建。
 
-JSON mode for scripting:
+脚本化使用 JSON 模式:
 ```bash
 ./target/debug/claw init --output-format json
 ```
 
-Returns structured output with `project_path`, `created[]`, `updated[]`, `partial[]`, `deferred[]`, and `skipped[]` arrays (one per artifact status), and `artifacts[]` carrying each file's `name` and machine-stable `status` tag. The legacy `message` field preserves backward compatibility.
+返回结构化输出,包含 `project_path`、`created[]`、`updated[]`、`partial[]`、`deferred[]`、`skipped[]` 数组(每种工件状态一个),以及携带每个文件 `name` 与机器稳定 `status` 标签的 `artifacts[]`。旧版 `message` 字段保留以兼容。
 
-**Why structured fields matter:** Claws can detect per-artifact state (`created`, `updated`, `partial`, `deferred`, or `skipped`) without substring-matching human prose. Use the status arrays for conditional follow-up logic (e.g., only commit if files were actually created, not just updated).
+**结构化字段的意义:** claw 可以识别每个工件的状态(`created`、`updated`、`partial`、`deferred`、`skipped`),不必对人类可读文本做子串匹配。可基于状态数组写条件化的后续逻辑(例如只有文件确实被创建过才提交,而不只是更新)。
 
-### Interactive REPL
+### 交互式 REPL
 
 ```bash
 cd rust
 ./target/debug/claw
 ```
 
-### One-shot prompt
+### 单次 prompt
 
 ```bash
 cd rust
 ./target/debug/claw prompt "summarize this repository"
 ```
 
-Pipe prompt text through stdin when automation already produces the prompt body:
+当自动化流程已经产出 prompt 正文时,可以通过 stdin 管道传入:
 
 ```bash
 printf 'summarize this repository\n' | ./target/debug/claw prompt --output-format json
 ```
 
-### Shorthand prompt mode
+### 简写 prompt 模式
 
 ```bash
 cd rust
 ./target/debug/claw "explain rust/crates/runtime/src/lib.rs"
 ```
 
-Use the POSIX `--` end-of-flags separator when the shorthand prompt itself begins with `-` or `--`:
+当简写 prompt 本身以 `-` 或 `--` 开头时,使用 POSIX 的 `--` 参数终止符:
 
 ```bash
 ./target/debug/claw -- "-summarize this dash-prefixed text"
 ```
 
-### JSON output for scripting
+### 脚本化 JSON 输出
 
 ```bash
 cd rust
 ./target/debug/claw --output-format json prompt "status"
 ```
 
-### Inspect worker state
+### 查看 worker 状态
 
-The `claw state` command reads `.claw/worker-state.json`, which is written by the interactive REPL or a one-shot prompt when a worker executes a task. This file contains the worker ID, session reference, model, and permission mode.
+`claw state` 读取 `.claw/worker-state.json`,该文件由交互式 REPL 或单次 prompt 在 worker 执行任务时写入,包含 worker ID、会话引用、模型与权限模式。
 
-Prerequisite: You must run `claw` (interactive REPL) or `claw prompt <text>` at least once in the repository to produce the worker state file.
+前提:你必须先在本仓库运行过一次 `claw`(交互式 REPL)或 `claw prompt <text>`,以生成 worker 状态文件。
 
 ```bash
 cd rust
 ./target/debug/claw state
 ```
 
-JSON mode:
+JSON 模式:
 ```bash
 ./target/debug/claw state --output-format json
 ```
 
-If you run `claw state` before any worker has executed, you will see a helpful error:
+如果从未有 worker 执行过就运行 `claw state`,会看到带提示的错误:
 ```
 error: no worker state file found at .claw/worker-state.json
   Hint: worker state is written by the interactive REPL or a non-interactive prompt.
@@ -138,61 +140,61 @@ error: no worker state file found at .claw/worker-state.json
   Then rerun: claw state [--output-format json]
 ```
 
-## Advanced slash commands (Interactive REPL only)
+## 高级斜杠命令(仅限交互式 REPL)
 
-These commands are available inside the interactive REPL (`claw` with no args). They extend the assistant with workspace analysis, planning, and navigation features.
+以下命令在交互式 REPL(无参数运行 `claw`)内可用。它们为助手扩展了 workspace 分析、规划与导航能力。
 
-### `/ultraplan` — Deep planning with multi-step reasoning
+### `/ultraplan` —— 多步推理的深度规划
 
-**Purpose:** Break down a complex task into steps using extended reasoning.
+**用途:** 用扩展推理把复杂任务拆解为步骤。
 
 ```bash
-# Start the REPL
+# 启动 REPL
 claw
 
-# Inside the REPL
+# REPL 内
 /ultraplan refactor the auth module to use async/await
 /ultraplan design a caching layer for database queries
 /ultraplan analyze this module for performance bottlenecks
 ```
 
-Output: A structured plan with numbered steps, reasoning for each step, and expected outcomes. Use this when you want the assistant to think through a problem in detail before coding.
+输出:带编号步骤的结构化计划,含每步推理与预期结果。想让助手在编码前深入思考问题时使用。
 
-### `/teleport` — Jump to a file or symbol
+### `/teleport` —— 跳转到文件或符号
 
-**Purpose:** Quickly navigate to a file, function, class, or struct by name.
+**用途:** 按名称快速导航到文件、函数、类或结构体。
 
 ```bash
-# Jump to a symbol
+# 跳转到符号
 /teleport UserService
 /teleport authenticate_user
 /teleport RequestHandler
 
-# Jump to a file
+# 跳转到文件
 /teleport src/auth.rs
 /teleport crates/runtime/lib.rs
 /teleport ./ARCHITECTURE.md
 ```
 
-Output: The file content, with the requested symbol highlighted or the file fully loaded. Useful for exploring the codebase without manually navigating directories. If multiple matches exist, the assistant shows the top candidates.
+输出:文件内容,高亮目标符号或整个文件加载。适合不手动翻目录地探索代码库。存在多个匹配时,助手会给出最可能的候选。
 
-### `/bughunter` — Scan for likely bugs and issues
+### `/bughunter` —— 扫描疑似 bug 与问题
 
-**Purpose:** Analyze code for common pitfalls, anti-patterns, and potential bugs.
+**用途:** 分析代码中的常见陷阱、反模式与潜在 bug。
 
 ```bash
-# Scan the entire workspace
+# 扫描整个 workspace
 /bughunter
 
-# Scan a specific directory or file
+# 扫描指定目录或文件
 /bughunter src/handlers
 /bughunter rust/crates/runtime
 /bughunter src/auth.rs
 ```
 
-Output: A list of suspicious patterns with explanations (e.g., "unchecked unwrap()", "potential race condition", "missing error handling"). Each finding includes the file, line number, and suggested fix. Use this as a first pass before a full code review.
+输出:可疑模式清单及解释(例如 "unchecked unwrap()"、"potential race condition"、"missing error handling")。每条发现包含文件、行号与建议修复。可作为完整代码评审前的第一遍初筛。
 
-## Model and permission controls
+## 模型与权限控制
 
 ```bash
 cd rust
@@ -203,25 +205,25 @@ cd rust
 ./target/debug/claw --cwd ../other-workspace status --output-format json
 ```
 
-Global workspace override flags: `--cwd PATH`, `-C PATH`, and `--directory PATH` are accepted before any subcommand. They are validated before command dispatch and take precedence over the process `$PWD`; invalid paths return typed `invalid_cwd` JSON errors in JSON mode.
+全局 workspace 覆盖旗标:`--cwd PATH`、`-C PATH`、`--directory PATH`,可放在任意子命令之前。它们在命令分发前校验,优先于进程 `$PWD`;非法路径在 JSON 模式下返回类型化的 `invalid_cwd` JSON 错误。
 
-`--allowedTools` accepts canonical snake_case tool names (for example `read_file`, `glob_search`, `web_fetch`) plus documented aliases such as `read`, `glob`, `Read`, and `WebFetch`. `claw status --output-format json` exposes `allowed_tools.available` and `allowed_tools.aliases`, and invalid values return typed `invalid_tool_name` JSON with `tool_name`, `available`, and `tool_aliases`. A missing value before a subcommand or another flag returns `missing_argument` with `argument:"--allowedTools"`.
+`--allowedTools` 接受规范的 snake_case 工具名(例如 `read_file`、`glob_search`、`web_fetch`),也接受文档化的别名如 `read`、`glob`、`Read`、`WebFetch`。`claw status --output-format json` 暴露 `allowed_tools.available` 与 `allowed_tools.aliases`;非法值返回带 `tool_name`、`available`、`tool_aliases` 的类型化 `invalid_tool_name` JSON。子命令或其他旗标前缺少取值时返回 `missing_argument`,其中 `argument:"--allowedTools"`。
 
-`--output-format` accepts `text` or `json` case-insensitively and normalizes to the canonical lowercase modes. `CLAW_OUTPUT_FORMAT=json` sets the default output format for scripts, while an explicit `--output-format` flag takes precedence. Repeating the flag emits a stderr warning and JSON status envelopes expose `format_source`, `format_raw`, and `format_overridden` so composed flag arrays are auditable; invalid values return typed `invalid_output_format` JSON with `value` and `expected:["text","json"]`.
+`--output-format` 接受大小写不敏感的 `text` 或 `json`,并规范化为小写规范模式。`CLAW_OUTPUT_FORMAT=json` 为脚本设定默认输出格式;显式 `--output-format` 旗标优先。重复该旗标会向 stderr 发警告,JSON 状态信封会暴露 `format_source`、`format_raw`、`format_overridden` 以便审计组合旗标;非法值返回带 `value` 与 `expected:["text","json"]` 的类型化 `invalid_output_format` JSON。
 
-Supported permission modes (default: `workspace-write`):
+支持的权限模式(默认 `workspace-write`):
 
-- `read-only` allows inspection-only local tools such as file reads, glob/grep searches, local skills, and status-style reporting. It does not allow workspace mutation, network-fetch/search tools, or arbitrary command execution.
-- `workspace-write` is the safe default. It allows reads plus direct file-editing tools inside the current workspace, including write/edit/notebook/config/plan-mode updates, while still gating network-fetch/search tools, arbitrary shell execution, subagent launches, REPL subprocesses, and other full-access tools behind an explicit escalation.
-- `danger-full-access` allows every registered tool requirement, including arbitrary command execution, web fetch/search, subagent launches, subprocess REPLs, and unrestricted tool access. Select it only with an explicit `--permission-mode danger-full-access`, `--dangerously-skip-permissions`, `--skip-permissions`, env, or config opt-in.
+- `read-only`:只允许只读的本地工具,如文件读取、glob/grep 搜索、本地 skills、状态类报告。不允许修改 workspace、网络抓取/搜索工具或任意命令执行。
+- `workspace-write`:安全默认值。允许读取,以及当前 workspace 内的直接文件编辑工具(write/edit/notebook/config/plan-mode 更新),同时仍把网络抓取/搜索、任意 shell 执行、子 agent 启动、REPL 子进程及其他全权限工具挡在显式提权之后。
+- `danger-full-access`:允许所有已注册工具,包括任意命令执行、web 抓取/搜索、子 agent 启动、子进程 REPL 与无限制工具访问。仅在显式 `--permission-mode danger-full-access`、`--dangerously-skip-permissions`、`--skip-permissions`、环境变量或配置选择加入时才会启用。
 
-Model aliases currently supported by the CLI:
+CLI 当前支持的模型别名:
 
 - `opus` → `claude-opus-4-7`
 - `sonnet` → `claude-sonnet-4-6`
 - `haiku` → `claude-haiku-4-5-20251213`
 
-## Authentication
+## 认证
 
 ### API key
 
@@ -236,54 +238,54 @@ cd rust
 export ANTHROPIC_AUTH_TOKEN="anthropic-oauth-or-proxy-bearer-token"
 ```
 
-### Which env var goes where
+### 哪个环境变量放在哪里
 
-`claw` accepts two Anthropic credential env vars and they are **not interchangeable** — the HTTP header Anthropic expects differs per credential shape. Putting the wrong value in the wrong slot is the most common 401 we see.
+`claw` 接受两个 Anthropic 凭据环境变量,二者**不可互换**——Anthropic 对不同凭据形态要求的 HTTP 头不同。把值放错槽位是我们见过的最常见 401 成因。
 
-| Credential shape | Env var | HTTP header | Typical source |
+| 凭据形态 | 环境变量 | HTTP 头 | 常见来源 |
 |---|---|---|---|
 | `sk-ant-*` API key | `ANTHROPIC_API_KEY` | `x-api-key: sk-ant-...` | [console.anthropic.com](https://console.anthropic.com) |
-| OAuth access token (opaque) | `ANTHROPIC_AUTH_TOKEN` | `Authorization: Bearer ...` | an Anthropic-compatible proxy or OAuth flow that mints bearer tokens |
-| OpenRouter key (`sk-or-v1-*`) | `OPENAI_API_KEY` + `OPENAI_BASE_URL=https://openrouter.ai/api/v1` | `Authorization: Bearer ...` | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| Ollama local instance | `OLLAMA_HOST` | no auth header (Ollama requires none) | local Ollama server at `http://127.0.0.1:11434` |
+| OAuth access token(不透明) | `ANTHROPIC_AUTH_TOKEN` | `Authorization: Bearer ...` | Anthropic 兼容代理或颁发 Bearer token 的 OAuth 流程 |
+| OpenRouter key(`sk-or-v1-*`) | `OPENAI_API_KEY` + `OPENAI_BASE_URL=https://openrouter.ai/api/v1` | `Authorization: Bearer ...` | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| Ollama 本地实例 | `OLLAMA_HOST` | 无认证头(Ollama 不需要) | 本地 Ollama 服务 `http://127.0.0.1:11434` |
 
-**Why this matters:** if you paste an `sk-ant-*` key into `ANTHROPIC_AUTH_TOKEN`, Anthropic's API will return `401 Invalid bearer token` because `sk-ant-*` keys are rejected over the Bearer header. The fix is a one-line env var swap — move the key to `ANTHROPIC_API_KEY`. Recent `claw` builds detect this exact shape (401 + `sk-ant-*` in the Bearer slot) and append a hint to the error message pointing at the fix.
+**为什么重要:** 如果把 `sk-ant-*` key 填进 `ANTHROPIC_AUTH_TOKEN`,Anthropic API 会返回 `401 Invalid bearer token`,因为 Bearer 头不接受 `sk-ant-*` key。修复只需换一个环境变量——把 key 移到 `ANTHROPIC_API_KEY`。较新的 `claw` 构建能识别这一精确形态(401 + Bearer 槽位里是 `sk-ant-*`)并在错误信息后附加指向修复方法的提示。
 
-**If you meant a different provider:** if `claw` reports missing Anthropic credentials but you already have `OPENAI_API_KEY`, `XAI_API_KEY`, or `DASHSCOPE_API_KEY` exported, you most likely forgot to prefix the model name with the provider's routing prefix. Use `--model openai/gpt-4.1-mini` (OpenAI-compat / OpenRouter / Ollama), `--model grok` (xAI), or `--model qwen-plus` (DashScope) and the prefix router will select the right backend regardless of the ambient credentials. The error message now includes a hint that names the detected env var.
+**如果你想用的是其他 provider:** 如果 `claw` 报告缺少 Anthropic 凭据,但你已导出 `OPENAI_API_KEY`、`XAI_API_KEY` 或 `DASHSCOPE_API_KEY`,多半是忘了给模型名加 provider 路由前缀。使用 `--model openai/gpt-4.1-mini`(OpenAI 兼容 / OpenRouter / Ollama)、`--model grok`(xAI)或 `--model qwen-plus`(DashScope),前缀路由器会无视环境里的其他凭据选择正确的后端。错误信息现在会点名检测到的环境变量。
 
 
-### Windows PowerShell provider switching
+### Windows PowerShell 的 provider 切换
 
-The same provider rules work in PowerShell. Use placeholder values in docs and tests; put real keys only in your private environment. Remove unrelated provider env vars when validating a switch so failures are easy to diagnose.
+同样的 provider 规则适用于 PowerShell。文档与测试中请使用占位值;真实 key 只放在私有环境里。验证切换时移除无关的 provider 环境变量,便于定位故障。
 
-`CLAUDE_CODE_PROVIDER` is not required for normal Claw routing; prefer explicit model prefixes such as `openai/` and provider-specific env vars so PowerShell examples stay portable.
+正常路由不需要 `CLAUDE_CODE_PROVIDER`;更推荐显式的模型前缀(如 `openai/`)加 provider 专属环境变量,让 PowerShell 示例保持可移植。
 
 ```powershell
-# Anthropic direct
+# Anthropic 直连
 $env:ANTHROPIC_API_KEY = "sk-ant-REPLACE_ME"
 Remove-Item Env:\OPENAI_BASE_URL -ErrorAction SilentlyContinue
 Remove-Item Env:\OPENAI_API_KEY -ErrorAction SilentlyContinue
 .\target\debug\claw.exe --model "sonnet" prompt "reply with ready"
 
-# OpenAI-compatible gateway / OpenRouter
+# OpenAI 兼容网关 / OpenRouter
 Remove-Item Env:\ANTHROPIC_API_KEY -ErrorAction SilentlyContinue
 $env:OPENAI_BASE_URL = "https://openrouter.ai/api/v1"
 $env:OPENAI_API_KEY = "sk-or-v1-REPLACE_ME"
 .\target\debug\claw.exe --model "openai/gpt-4.1-mini" prompt "reply with ready"
 
-# Local OpenAI-compatible server
+# 本地 OpenAI 兼容服务
 $env:OPENAI_BASE_URL = "http://127.0.0.1:11434/v1"
 Remove-Item Env:\OPENAI_API_KEY -ErrorAction SilentlyContinue
 .\target\debug\claw.exe --model "llama3.2" prompt "reply with ready"
 ```
 
-See the full [Windows install and release quickstart](./docs/windows-install-release.md) for release artifact setup, persistent `setx` usage, and WSL notes.
+release 构件安装、持久化 `setx` 用法与 WSL 注意事项,见完整的 [Windows 安装与发布快速上手](./docs/windows-install-release.md)。
 
-## Local Models
+## 本地模型
 
-`claw` can talk to local servers and provider gateways through either Anthropic-compatible or OpenAI-compatible endpoints. Use `ANTHROPIC_BASE_URL` with `ANTHROPIC_AUTH_TOKEN` for Anthropic-compatible services, or `OPENAI_BASE_URL` with `OPENAI_API_KEY` for OpenAI-compatible services. For copyable Ollama, llama.cpp, vLLM, raw `/v1/chat/completions`, and local skills install examples, see [`docs/local-openai-compatible-providers.md`](./docs/local-openai-compatible-providers.md).
+`claw` 可通过 Anthropic 兼容或 OpenAI 兼容端点对接本地服务器与 provider 网关:Anthropic 兼容服务用 `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`,OpenAI 兼容服务用 `OPENAI_BASE_URL` + `OPENAI_API_KEY`。可复制的 Ollama、llama.cpp、vLLM、原生 `/v1/chat/completions` 及本地 skills 安装示例见 [`docs/local-openai-compatible-providers.md`](./docs/local-openai-compatible-providers.md)。
 
-### Anthropic-compatible endpoint
+### Anthropic 兼容端点
 
 ```bash
 export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"
@@ -293,7 +295,7 @@ cd rust
 ./target/debug/claw --model "claude-sonnet-4-6" prompt "reply with the word ready"
 ```
 
-### OpenAI-compatible endpoint
+### OpenAI 兼容端点
 
 ```bash
 export OPENAI_BASE_URL="http://127.0.0.1:8000/v1"
@@ -312,9 +314,9 @@ cd rust
 ./target/debug/claw --model "llama3.2" prompt "summarize this repository in one sentence"
 ```
 
-`OLLAMA_HOST` is the preferred env var. Claw routes all models to the local Ollama endpoint automatically, and no API key is needed. The older `OPENAI_BASE_URL` + `OPENAI_API_KEY` workaround is also supported.
+`OLLAMA_HOST` 是首选环境变量。Claw 自动把所有模型路由到本地 Ollama 端点,且无需 API key。旧的 `OPENAI_BASE_URL` + `OPENAI_API_KEY` 变通方案同样支持。
 
-For Ollama tags with punctuation (for example `qwen2.5-coder:7b`), both approaches work:
+对带标点的 Ollama tag(例如 `qwen2.5-coder:7b`),两种方式都可行:
 
 ```bash
 export OLLAMA_HOST="http://127.0.0.1:11434"
@@ -323,7 +325,7 @@ cd rust
 ./target/debug/claw --model "qwen2.5-coder:7b" prompt "reply with ready"
 ```
 
-If the local server exposes a slash-containing model ID, prefix it with `local/` so Claw selects the OpenAI-compatible transport while sending the remainder verbatim on the wire: `--model "local/Qwen/Qwen3.6-27B-FP8"`.
+如果本地服务器暴露的模型 ID 含斜杠,加 `local/` 前缀,Claw 会选用 OpenAI 兼容传输并把其余部分原样上线:`--model "local/Qwen/Qwen3.6-27B-FP8"`。
 
 ### OpenRouter
 
@@ -335,45 +337,45 @@ cd rust
 ./target/debug/claw --model "openai/gpt-4.1-mini" prompt "summarize this repository in one sentence"
 ```
 
-### Alibaba DashScope (Qwen)
+### 阿里 DashScope(Qwen)
 
-For Qwen models via Alibaba's native DashScope API (higher rate limits than OpenRouter):
+通过阿里官方 DashScope API 使用 Qwen 模型(比 OpenRouter 的限流更宽松):
 
 ```bash
 export DASHSCOPE_API_KEY="sk-..."
 
 cd rust
 ./target/debug/claw --model "qwen/qwen-max" prompt "hello"
-# or bare:
+# 或裸名:
 ./target/debug/claw --model "qwen-plus" prompt "hello"
 ```
 
-Model names starting with `qwen/` or `qwen-` are automatically routed to the DashScope compatible-mode endpoint (`https://dashscope.aliyuncs.com/compatible-mode/v1`). You do **not** need to set `OPENAI_BASE_URL` or unset `ANTHROPIC_API_KEY` — the model prefix wins over the ambient credential sniffer.
+以 `qwen/` 或 `qwen-` 开头的模型名自动路由到 DashScope 兼容模式端点(`https://dashscope.aliyuncs.com/compatible-mode/v1`)。**无需**设置 `OPENAI_BASE_URL`,也**无需**清掉 `ANTHROPIC_API_KEY`——模型前缀优先于环境凭据嗅探。
 
-Reasoning variants (`qwen-qwq-*`, `qwq-*`, `*-thinking`) automatically strip `temperature`/`top_p`/`frequency_penalty`/`presence_penalty` before the request hits the wire (these params are rejected by reasoning models).
+推理变体(`qwen-qwq-*`、`qwq-*`、`*-thinking`)在请求上线前自动剥离 `temperature`/`top_p`/`frequency_penalty`/`presence_penalty`(推理模型拒绝这些参数)。
 
-## Supported Providers & Models
+## 支持的 Provider 与模型
 
-`claw` has three built-in provider backends. The provider is selected automatically based on the model name, falling back to whichever credential is present in the environment.
+`claw` 内置三个 provider 后端。provider 依据模型名自动选择,并回退到环境中存在的凭据。
 
-### Provider matrix
+### Provider 矩阵
 
-| Provider | Protocol | Auth env var(s) | Base URL env var | Default base URL |
+| Provider | 协议 | 认证环境变量 | Base URL 环境变量 | 默认 Base URL |
 |---|---|---|---|---|
-| **Anthropic** (direct) | Anthropic Messages API | `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` | `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` |
-| **xAI** | OpenAI-compatible | `XAI_API_KEY` | `XAI_BASE_URL` | `https://api.x.ai/v1` |
-| **OpenAI-compatible** | OpenAI Chat Completions | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `https://api.openai.com/v1` |
-| **DashScope** (Alibaba) | OpenAI-compatible | `DASHSCOPE_API_KEY` | `DASHSCOPE_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| **Anthropic**(直连) | Anthropic Messages API | `ANTHROPIC_API_KEY` 或 `ANTHROPIC_AUTH_TOKEN` | `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` |
+| **xAI** | OpenAI 兼容 | `XAI_API_KEY` | `XAI_BASE_URL` | `https://api.x.ai/v1` |
+| **OpenAI 兼容** | OpenAI Chat Completions | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `https://api.openai.com/v1` |
+| **DashScope**(阿里) | OpenAI 兼容 | `DASHSCOPE_API_KEY` | `DASHSCOPE_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 
-The OpenAI-compatible backend also serves as the gateway for **OpenRouter**, **Ollama**, and any other service that speaks the OpenAI `/v1/chat/completions` wire format — just point `OPENAI_BASE_URL` at the service.
+OpenAI 兼容后端同时也是 **OpenRouter**、**Ollama** 及任何讲 OpenAI `/v1/chat/completions` 协议的服务的网关——把 `OPENAI_BASE_URL` 指向该服务即可。
 
-**Model-name prefix routing:** If a model name starts with `openai/`, `local/`, `gpt-`, `qwen/`, `qwen-`, `kimi/`, or `kimi-`, the provider is selected by the prefix regardless of which env vars are set. This prevents accidental misrouting to Anthropic when multiple credentials exist in the environment. For the default OpenAI API and local/private OpenAI-compatible endpoints, `openai/` is a routing prefix and is stripped before the request hits the wire. For non-local custom `OPENAI_BASE_URL` gateways, slash-containing OpenAI-compatible slugs (for example OpenRouter-style `openai/gpt-4.1-mini`) are preserved so the gateway receives the model ID it expects. The `local/` prefix is an explicit escape hatch for local slash-containing model IDs: it is stripped while the rest of the model ID is sent verbatim.
+**模型名前缀路由:** 模型名以 `openai/`、`local/`、`gpt-`、`qwen/`、`qwen-`、`kimi/` 或 `kimi-` 开头时,provider 由前缀决定,无视已设置的环境变量。这避免了多凭据环境下被误路由到 Anthropic。对默认 OpenAI API 和本地/私有 OpenAI 兼容端点,`openai/` 只是路由前缀,请求上线前会被剥离。对非本地自定义 `OPENAI_BASE_URL` 网关,含斜杠的 OpenAI 兼容 slug(例如 OpenRouter 风格的 `openai/gpt-4.1-mini`)会被保留,让网关收到它期望的模型 ID。`local/` 前缀是给含斜杠本地模型 ID 的显式逃生通道:前缀被剥离,其余部分原样发送。
 
-### Tested models and aliases
+### 已测试的模型与别名
 
-These are the models registered in the built-in alias table with known token limits:
+以下是内置别名表中注册、且已知 token 上限的模型:
 
-| Alias | Resolved model name | Provider | Max output tokens | Context window |
+| 别名 | 解析后的模型名 | Provider | 最大输出 token | 上下文窗口 |
 |---|---|---|---|---|
 | `opus` | `claude-opus-4-7` | Anthropic | 32 000 | 200 000 |
 | `sonnet` | `claude-sonnet-4-6` | Anthropic | 64 000 | 200 000 |
@@ -384,14 +386,14 @@ These are the models registered in the built-in alias table with known token lim
 | `kimi` | `kimi-k2.5` | DashScope | 16 384 | 256 000 |
 | `qwen-max` | `qwen-max` | DashScope | 8 192 | 131 072 |
 | `qwen-plus` | `qwen-plus` | DashScope | 8 192 | 131 072 |
-| `gpt-4.1` / `gpt-4.1-mini` / `gpt-4.1-nano` | same | OpenAI-compatible | 32 768 | 1 047 576 |
-| `gpt-5.4` / `gpt-5.4-mini` / `gpt-5.4-nano` | same | OpenAI-compatible | 128 000 | 1 000 000 / 400 000 |
+| `gpt-4.1` / `gpt-4.1-mini` / `gpt-4.1-nano` | 同名 | OpenAI 兼容 | 32 768 | 1 047 576 |
+| `gpt-5.4` / `gpt-5.4-mini` / `gpt-5.4-nano` | 同名 | OpenAI 兼容 | 128 000 | 1 000 000 / 400 000 |
 
-Any model name that does not match an alias is passed through verbatim after provider routing is resolved. This is how you use OpenRouter model slugs (`openai/gpt-4.1-mini` with a custom `OPENAI_BASE_URL`), Ollama tags (`llama3.2` or `qwen2.5-coder:7b`), slash-containing local IDs (`local/Qwen/Qwen3.6-27B-FP8`), or full Anthropic model IDs (`claude-sonnet-4-20250514`).
+未匹配别名的模型名会在完成 provider 路由后原样透传。这就是使用 OpenRouter 模型 slug(配自定义 `OPENAI_BASE_URL` 的 `openai/gpt-4.1-mini`)、Ollama tag(`llama3.2` 或 `qwen2.5-coder:7b`)、含斜杠的本地 ID(`local/Qwen/Qwen3.6-27B-FP8`)或完整 Anthropic 模型 ID(`claude-sonnet-4-20250514`)的方式。
 
-### User-defined aliases
+### 用户自定义别名
 
-You can add custom aliases in any settings file (`~/.claw/settings.json`, `.claw/settings.json`, or `.claw/settings.local.json`):
+可在任意设置文件(`~/.claw/settings.json`、`.claw/settings.json` 或 `.claw/settings.local.json`)中添加自定义别名:
 
 ```json
 {
@@ -403,77 +405,77 @@ You can add custom aliases in any settings file (`~/.claw/settings.json`, `.claw
 }
 ```
 
-Local project settings override user-level settings. Aliases resolve through the built-in table, so `"fast": "haiku"` also works.
+项目级设置覆盖用户级设置。别名会经内置表解析,所以 `"fast": "haiku"` 也有效。
 
-Model selection precedence is CLI flag, environment, config, then default. The environment model slot accepts `CLAW_MODEL`, `ANTHROPIC_MODEL`, and `ANTHROPIC_DEFAULT_MODEL` in that order; aliases from those variables are resolved and validated before provider startup. `claw --output-format json status` exposes `model_raw`, `model_alias_resolved_to`, and `model_env_var` so automation can see the winning value.
+模型选择优先级:CLI 旗标 → 环境变量 → 配置 → 默认值。环境变量槽按序接受 `CLAW_MODEL`、`ANTHROPIC_MODEL`、`ANTHROPIC_DEFAULT_MODEL`;来自这些变量的别名会在 provider 启动前解析并校验。`claw --output-format json status` 暴露 `model_raw`、`model_alias_resolved_to`、`model_env_var`,自动化可以看到最终胜出的值。
 
-### How provider detection works
+### Provider 检测的工作方式
 
-1. If the resolved model name starts with `claude` → Anthropic.
-2. If it starts with `grok` → xAI.
-3. If it starts with `openai/`, `local/`, or `gpt-` → OpenAI-compatible.
-4. If it starts with `qwen/`, `qwen-`, `kimi/`, or `kimi-` → DashScope-compatible OpenAI wire format.
-5. If `OPENAI_BASE_URL` is set, local-looking unknown model names such as `llama3.2` or `qwen2.5-coder:7b` route to the OpenAI-compatible client for local/gateway servers.
-6. Otherwise, `claw` checks which credential is set: Anthropic first, then OpenAI, then xAI. If only `OPENAI_BASE_URL` is set, it still routes to OpenAI-compatible for authless local servers.
-7. If nothing matches, it defaults to Anthropic.
+1. 解析后的模型名以 `claude` 开头 → Anthropic。
+2. 以 `grok` 开头 → xAI。
+3. 以 `openai/`、`local/` 或 `gpt-` 开头 → OpenAI 兼容。
+4. 以 `qwen/`、`qwen-`、`kimi/` 或 `kimi-` 开头 → DashScope 兼容的 OpenAI 协议。
+5. 设置了 `OPENAI_BASE_URL` 时,`llama3.2`、`qwen2.5-coder:7b` 这类本地风格未知模型名路由到 OpenAI 兼容客户端,用于本地/网关服务器。
+6. 否则,`claw` 检查哪个凭据存在:先 Anthropic,再 OpenAI,再 xAI。若只设了 `OPENAI_BASE_URL`,依然路由到 OpenAI 兼容以支持免认证的本地服务器。
+7. 都不匹配时,默认 Anthropic。
 
 
-### Provider diagnostics and custom OpenAI-compatible parameters
+### Provider 诊断与自定义 OpenAI 兼容参数
 
-The API layer exposes a provider diagnostics snapshot via `api::provider_diagnostics_for_model(model)`. It reports the resolved provider, auth/base-url environment variables, default base URL, whether the provider uses the OpenAI-compatible wire format, whether reasoning tuning parameters are stripped, whether DeepSeek V4 reasoning history is preserved, proxy support, extra-body support, and whether slash-containing model IDs are preserved for custom OpenAI-compatible gateways.
+API 层通过 `api::provider_diagnostics_for_model(model)` 暴露 provider 诊断快照:报告解析出的 provider、认证/base-url 环境变量、默认 base URL、是否使用 OpenAI 兼容协议、是否剥离推理调参、是否保留 DeepSeek V4 推理历史、代理支持、extra-body 支持,以及自定义 OpenAI 兼容网关是否保留含斜杠模型 ID。
 
-For gateway features that are not first-class request fields yet, `MessageRequest::extra_body` passes through provider-specific JSON parameters such as `web_search_options` or `parallel_tool_calls`. Core protocol fields (`model`, `messages`, `stream`, `tools`, `tool_choice`, `max_tokens`, and `max_completion_tokens`) are protected and cannot be overridden through `extra_body`.
+对尚非一等请求字段的网关特性,`MessageRequest::extra_body` 可透传 provider 专属 JSON 参数,如 `web_search_options` 或 `parallel_tool_calls`。核心协议字段(`model`、`messages`、`stream`、`tools`、`tool_choice`、`max_tokens`、`max_completion_tokens`)受保护,无法通过 `extra_body` 覆盖。
 
-## File context and navigation
+## 文件上下文与导航
 
-Use `@path/to/file` in prompts to submit repository files as context, for example `Read @src/app.ts and explain the bug`, `Compare @old.md and @new.md`, or `Use @logs/error.txt as context and suggest a fix`. Prompt history, `Ctrl-r`, and long-output scrolling come from your shell, terminal, or tmux rather than from Claw itself. See [`docs/navigation-file-context.md`](./docs/navigation-file-context.md) for scrollback, attachment, and secret-redaction guidance.
+在 prompt 中使用 `@path/to/file` 提交仓库文件作为上下文,例如 `Read @src/app.ts and explain the bug`、`Compare @old.md and @new.md` 或 `Use @logs/error.txt as context and suggest a fix`。Prompt 历史、`Ctrl-r` 与长输出回滚来自你的 shell、终端或 tmux,而非 Claw 本身。回滚缓冲、附件与密钥脱敏指引见 [`docs/navigation-file-context.md`](./docs/navigation-file-context.md)。
 
-## FAQ
+## 常见问题(FAQ)
 
-### Is Claw Code Claude-only?
+### Claw Code 只支持 Claude 吗?
 
-No. Claw Code is a Claude-Code-shaped workflow/runtime, not a Claude-only product. It can target Anthropic and OpenAI-compatible/provider-routed/local models depending on config. Non-Claude providers may require stricter response-shape and tool-call compatibility, so some workflows can be rougher than first-party Anthropic/OpenAI paths; provider-specific identity leaks are bugs, not product intent. See [`docs/local-openai-compatible-providers.md`](./docs/local-openai-compatible-providers.md) for local provider examples.
+不是。Claw Code 是 Claude Code 形状的工作流/runtime,不是 Claude 专属产品。依据配置,它可以指向 Anthropic、OpenAI 兼容/前缀路由/本地模型。非 Claude provider 可能对响应形态与 tool-call 兼容性要求更严格,部分工作流会比官方 Anthropic/OpenAI 路径更粗糙;provider 特有的身份泄露属于 bug,不是产品意图。本地 provider 示例见 [`docs/local-openai-compatible-providers.md`](./docs/local-openai-compatible-providers.md)。
 
-### What about Codex?
+### Codex 是怎么回事?
 
-The name "codex" appears in the Claw Code ecosystem but it does **not** refer to OpenAI Codex (the code-generation model). Here is what it means in this project:
+"codex" 一词出现在 Claw Code 生态中,但**不**指 OpenAI Codex(那个代码生成模型)。它在本项目中指:
 
-- **`oh-my-codex` (OmX)** is the workflow and plugin layer that sits on top of `claw`. It provides planning modes, parallel multi-agent execution, notification routing, and other automation features. See [PHILOSOPHY.md](./PHILOSOPHY.md) and the [oh-my-codex repo](https://github.com/Yeachan-Heo/oh-my-codex).
-- **`.codex/` directories** (e.g. `.codex/skills`, `.codex/agents`, `.codex/commands`) are legacy lookup paths that `claw` still scans alongside the primary `.claw/` directories.
-- **`CODEX_HOME`** is an optional environment variable that points to a custom root for user-level skill and command lookups.
+- **`oh-my-codex` (OmX)**:位于 `claw` 之上的工作流与插件层,提供规划模式、并行多 agent 执行、通知路由等自动化能力。见 [PHILOSOPHY.md](./PHILOSOPHY.md) 与 [oh-my-codex 仓库](https://github.com/Yeachan-Heo/oh-my-codex)。
+- **`.codex/` 目录**(如 `.codex/skills`、`.codex/agents`、`.codex/commands`):遗留查找路径,`claw` 仍会与主 `.claw/` 目录一起扫描。
+- **`CODEX_HOME`**:可选环境变量,为用户级 skill 与命令查找指定自定义根目录。
 
-`claw` does **not** support OpenAI Codex sessions, the Codex CLI, or Codex session import/export. If you need to use OpenAI models (like GPT-4.1), configure the OpenAI-compatible provider as shown above in the [OpenAI-compatible endpoint](#openai-compatible-endpoint) and [OpenRouter](#openrouter) sections.
+`claw` **不**支持 OpenAI Codex 会话、Codex CLI 或 Codex 会话导入导出。若要使用 OpenAI 模型(如 GPT-4.1),按上文 [OpenAI 兼容端点](#openai-兼容端点) 与 [OpenRouter](#openrouter) 小节配置 OpenAI 兼容 provider。
 
-## HTTP proxy support
+## HTTP 代理支持
 
-`claw` honours the standard `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables (both upper- and lower-case spellings are accepted) when issuing outbound requests to Anthropic, OpenAI-, and xAI-compatible endpoints. Set them before launching the CLI and the underlying `reqwest` client will be configured automatically.
+`claw` 在向 Anthropic、OpenAI 兼容与 xAI 兼容端点发起出站请求时,遵循标准的 `HTTP_PROXY`、`HTTPS_PROXY`、`NO_PROXY` 环境变量(大小写均可)。在启动 CLI 前设置,底层 `reqwest` 客户端会自动完成配置。
 
-### Environment variables
+### 环境变量
 
 ```bash
 export HTTPS_PROXY="http://proxy.corp.example:3128"
 export HTTP_PROXY="http://proxy.corp.example:3128"
 export NO_PROXY="localhost,127.0.0.1,.corp.example"
-export CLAW_OUTPUT_FORMAT="json"   # default non-interactive output format; flags override it
-export CLAW_LOG="debug"             # claw-specific log level selector surfaced by help/doctor
-export RUST_LOG="claw=debug"        # Rust logging convention surfaced by help/doctor
+export CLAW_OUTPUT_FORMAT="json"   # 默认非交互输出格式;旗标可覆盖
+export CLAW_LOG="debug"             # help/doctor 中会提示的 claw 专属日志级别
+export RUST_LOG="claw=debug"        # help/doctor 中会提示的 Rust 日志约定
 
 cd rust
 ./target/debug/claw prompt "hello via the corporate proxy"
 ```
 
-### Programmatic `proxy_url` config option
+### 编程式 `proxy_url` 配置项
 
-As an alternative to per-scheme environment variables, the `ProxyConfig` type exposes a `proxy_url` field that acts as a single catch-all proxy for both HTTP and HTTPS traffic. When `proxy_url` is set it takes precedence over the separate `http_proxy` and `https_proxy` fields.
+作为按协议环境变量的替代,`ProxyConfig` 类型暴露 `proxy_url` 字段,作为同时覆盖 HTTP 与 HTTPS 流量的统一代理。设置 `proxy_url` 后,其优先级高于单独的 `http_proxy` 与 `https_proxy` 字段。
 
 ```rust
 use api::{build_http_client_with, ProxyConfig};
 
-// From a single unified URL (config file, CLI flag, etc.)
+// 从单一统一 URL(配置文件、CLI 旗标等)
 let config = ProxyConfig::from_proxy_url("http://proxy.corp.example:3128");
 let client = build_http_client_with(&config).expect("proxy client");
 
-// Or set the field directly alongside NO_PROXY
+// 或直接设置字段并配合 NO_PROXY
 let config = ProxyConfig {
     proxy_url: Some("http://proxy.corp.example:3128".to_string()),
     no_proxy: Some("localhost,127.0.0.1".to_string()),
@@ -482,17 +484,17 @@ let config = ProxyConfig {
 let client = build_http_client_with(&config).expect("proxy client");
 ```
 
-### Notes
+### 注意事项
 
-- When both `HTTPS_PROXY` and `HTTP_PROXY` are set, the secure proxy applies to `https://` URLs and the plain proxy applies to `http://` URLs.
-- `proxy_url` is a unified alternative: when set, it applies to both `http://` and `https://` destinations, overriding the per-scheme fields.
-- `NO_PROXY` accepts a comma-separated list of host suffixes (for example `.corp.example`) and IP literals.
-- Empty values are treated as unset, so leaving `HTTPS_PROXY=""` in your shell will not enable a proxy.
-- If a proxy URL cannot be parsed, `claw` falls back to a direct (no-proxy) client so existing workflows keep working; double-check the URL if you expected the request to be tunnelled.
+- 同时设置 `HTTPS_PROXY` 与 `HTTP_PROXY` 时,安全代理作用于 `https://` URL,普通代理作用于 `http://` URL。
+- `proxy_url` 是统一替代:设置后同时作用于 `http://` 与 `https://`,并覆盖按协议的字段。
+- `NO_PROXY` 接受逗号分隔的主机后缀(例如 `.corp.example`)与 IP 字面量列表。
+- 空值视为未设置,所以 `HTTPS_PROXY=""` 不会启用代理。
+- 代理 URL 无法解析时,`claw` 回退为直连(无代理)客户端,保证既有工作流继续可用;若你预期请求走隧道,请复查 URL。
 
 ## Skills
 
-Use `/skills list` in the interactive REPL or `claw skills --output-format json` from the direct CLI to inspect installed skills. For offline/local installs, install the directory that contains `SKILL.md`, then verify the discovered name before invoking it. `skills install`, `skills uninstall`, and `agents create` are local filesystem lifecycle commands; they do not require provider credentials.
+在交互式 REPL 中使用 `/skills list`,或从直接 CLI 使用 `claw skills --output-format json` 检查已安装 skills。离线/本地安装时,安装包含 `SKILL.md` 的目录,然后在调用前确认发现的名称。`skills install`、`skills uninstall`、`agents create` 是本地文件系统生命周期命令,不需要 provider 凭据。
 
 ```text
 /skills install /absolute/path/to/my-skill
@@ -501,9 +503,9 @@ Use `/skills list` in the interactive REPL or `claw skills --output-format json`
 /skills my-skill
 ```
 
-If install succeeds but invocation fails with a provider HTTP error, treat provider setup separately: run `claw doctor` and a one-shot prompt smoke test before reinstalling the skill. See [`docs/local-openai-compatible-providers.md`](./docs/local-openai-compatible-providers.md#local-skills-install-from-disk) for the full checklist.
+如果安装成功但调用时出现 provider HTTP 错误,请把 provider 配置当作独立问题处理:先运行 `claw doctor` 和一次单发 prompt 冒烟测试,再考虑重装 skill。完整检查清单见 [`docs/local-openai-compatible-providers.md`](./docs/local-openai-compatible-providers.md#local-skills-install-from-disk)。
 
-## Common operational commands
+## 常用操作命令
 
 ```bash
 cd rust
@@ -516,16 +518,14 @@ cd rust
 ./target/debug/claw system-prompt --cwd .. --date 2026-04-04
 ```
 
-## Install an external skill
+## 安装外部 skill
 
-`claw skills install <path>` accepts a local skill directory that contains
-`SKILL.md` or a standalone markdown file. This is useful when a companion
-repository ships a skill prompt that should be available through `/skills`.
+`claw skills install <path>` 接受包含 `SKILL.md` 的本地 skill 目录或独立 markdown 文件。当配套仓库发布了希望经 `/skills` 使用的 skill prompt 时很有用。
 
-For example, install TweetClaw as an X/Twitter automation skill:
+例如,把 TweetClaw 安装为 X/Twitter 自动化 skill:
 
 ```bash
-# From a parent directory that contains claw-code
+# 在包含 claw-code 的父目录中
 git clone https://github.com/Xquik-dev/tweetclaw
 cd claw-code/rust
 ./target/debug/claw skills install ../../tweetclaw/skills/tweetclaw
@@ -533,23 +533,20 @@ cd claw-code/rust
 ./target/debug/claw skills uninstall tweetclaw
 ```
 
-TweetClaw gives `claw` users a local skill guide for OpenClaw/Xquik workflows
-such as tweet search, reply search, follower export, monitors, webhooks, and
-approval-gated posting. Configure any Xquik credentials outside the prompt and
-avoid pasting API keys into chat.
+TweetClaw 为 `claw` 用户提供 OpenClaw/Xquik 工作流的本地 skill 指南:推文搜索、回复搜索、关注者导出、监控、webhook 与带审批门禁的发文。请把 Xquik 凭据配置在 prompt 之外,避免把 API key 粘进聊天。
 
-## Author a local agent
+## 编写本地 agent
 
-`claw agents create <name>` scaffolds a local `.claw/agents/<name>.toml` file for the current workspace. The scaffold is intentionally small so you can edit the description, model, and reasoning effort before listing or invoking agents:
+`claw agents create <name>` 为当前 workspace 生成 `.claw/agents/<name>.toml` 脚手架。脚手架刻意保持精简,便于在列出或调用 agent 前编辑描述、模型与推理力度:
 
 ```bash
 ./target/debug/claw agents create release-checker
 ./target/debug/claw agents list
 ```
 
-## Session management
+## 会话管理
 
-REPL turns are persisted under `.claw/sessions/` in the current workspace.
+REPL 回合持久化在当前 workspace 的 `.claw/sessions/` 下。
 
 ```bash
 cd rust
@@ -557,11 +554,11 @@ cd rust
 ./target/debug/claw --resume latest /status /diff
 ```
 
-Useful interactive commands include `/help`, `/status`, `/cost`, `/config`, `/session`, `/model`, `/permissions`, and `/export`.
+常用的交互命令包括 `/help`、`/status`、`/cost`、`/config`、`/session`、`/model`、`/permissions`、`/export`。
 
-## Config file resolution order
+## 配置文件解析顺序
 
-Runtime config is loaded in this order, with later entries overriding earlier ones:
+运行时配置按此顺序加载,后者覆盖前者:
 
 1. `~/.claw.json`
 2. `~/.config/claw/settings.json`
@@ -569,35 +566,17 @@ Runtime config is loaded in this order, with later entries overriding earlier on
 4. `<repo>/.claw/settings.json`
 5. `<repo>/.claw/settings.local.json`
 
-The list is also the precedence chain: project-local settings override project settings, project settings override the legacy project `.claw.json`, and project files override user files. `claw --output-format json config` includes each discovered file's `precedence_rank`, `wins_for_keys`, and `shadowed_keys` so automation can see which file controls each effective key without reimplementing the merge order.
+这一列表同时也是优先级链:项目本地设置覆盖项目设置,项目设置覆盖旧版项目 `.claw.json`,项目文件覆盖用户文件。`claw --output-format json config` 包含每个被发现文件的 `precedence_rank`、`wins_for_keys`、`shadowed_keys`,自动化无需重新实现合并顺序即可知道每个生效键由哪个文件控制。
 
-## MCP server validation
+## MCP 服务器校验
 
-`claw mcp --output-format json` loads valid `mcpServers` entries even when sibling entries are malformed. The JSON list envelope distinguishes the total configured entries from the valid and invalid subsets:
+`claw mcp --output-format json` 即使兄弟条目格式错误,也会加载有效的 `mcpServers` 条目。JSON 列表信封区分配置总数与有效/无效子集(`configured_servers`、`total_configured`、`valid_count`、`invalid_count`、`servers[]`、`invalid_servers[]`,后者含 `name`、`error_field`、`reason`、`valid`)。
 
-```json
-{
-  "configured_servers": 1,
-  "total_configured": 2,
-  "valid_count": 1,
-  "invalid_count": 1,
-  "servers": [{ "name": "valid-server", "valid": true }],
-  "invalid_servers": [
-    {
-      "name": "missing-command",
-      "error_field": "command",
-      "reason": ".claw.json: mcpServers.missing-command: missing string field command",
-      "valid": false
-    }
-  ]
-}
-```
+`status --output-format json` 在 `mcp_validation` 下呈现同样信息,`doctor --output-format json` 包含 `mcp validation` 检查,自动化因此可以在不丢失可用 MCP 服务器的前提下修复每个被拒条目。
 
-`status --output-format json` mirrors this under `mcp_validation`, and `doctor --output-format json` includes an `mcp validation` check so automation can repair every rejected server entry without losing usable MCP servers.
+## Hook 配置
 
-## Hook configuration
-
-`hooks.PreToolUse`, `hooks.PostToolUse`, and `hooks.PostToolUseFailure` accept either legacy command strings or object-style entries with a `matcher` and nested command hooks:
+`hooks.PreToolUse`、`hooks.PostToolUse`、`hooks.PostToolUseFailure` 接受旧版命令字符串,或带 `matcher` 与嵌套命令 hook 的对象式条目:
 
 ```json
 {
@@ -615,19 +594,19 @@ The list is also the precedence chain: project-local settings override project s
 }
 ```
 
-Object-style matchers are optional. When present, they match tool names case-insensitively and support `*` wildcards plus comma or pipe separated alternatives. Nested hook `type` may be omitted or set to `"command"`; each nested command runs in configuration order.
-Legacy bare-string hook entries still load for backward compatibility but emit deprecation warnings suggesting migration to object-style entries. Unknown hook event names (e.g. `Stop`, `Notification`) are recorded as invalid without rejecting valid hooks. `status --output-format json` mirrors partial hook validation under `hook_validation` with `valid_count`, `invalid_count`, and `invalid_hooks:[{event, index, hook_index, kind, error_field, reason, valid:false}]`. `doctor --output-format json` includes a `hook validation` check so automation can repair every rejected hook entry without losing usable hooks.
+对象式 matcher 是可选的。存在时按工具名大小写不敏感匹配,支持 `*` 通配符以及逗号或竖线分隔的多个备选。嵌套 hook 的 `type` 可省略或设为 `"command"`;每个嵌套命令按配置顺序执行。
+旧版裸字符串 hook 条目仍会加载以保持兼容,但会发弃用警告,建议迁移到对象式条目。未知的 hook 事件名(如 `Stop`、`Notification`)会被记为无效,而不影响有效 hook。`status --output-format json` 在 `hook_validation` 下镜像部分 hook 校验结果,含 `valid_count`、`invalid_count`、`invalid_hooks:[{event, index, hook_index, kind, error_field, reason, valid:false}]`。`doctor --output-format json` 包含 `hook validation` 检查,自动化可以在不丢失可用 hook 的前提下修复每个被拒条目。
 
-## Project instruction rules
+## 项目指令规则
 
-In addition to root instruction files such as `CLAUDE.md`, `CLAW.md`, `AGENTS.md`, `.claw/CLAUDE.md`, `.claude/CLAUDE.md`, and `.claw/instructions.md`, `claw` loads sorted Markdown/text rule files from:
+除根级指令文件(`CLAUDE.md`、`CLAW.md`、`AGENTS.md`、`.claw/CLAUDE.md`、`.claude/CLAUDE.md`、`.claw/instructions.md`)外,`claw` 还按排序加载以下 Markdown/文本规则文件:
 
-- `<repo>/.claw/rules/` (`.md`, `.txt`, `.mdc`) for shared project rules.
-- `<repo>/.claw/rules.local/` for personal local rules; this path is gitignored.
+- `<repo>/.claw/rules/`(`.md`、`.txt`、`.mdc`):共享项目规则。
+- `<repo>/.claw/rules.local/`:个人本地规则;该路径已被 gitignore。
 
-Root instruction-file priority is `CLAUDE.md`, then `CLAW.md`, then `AGENTS.md` for each discovered directory. Discovery is bounded to the current git root when one exists, otherwise to the current directory only, so stale parent files outside the project do not silently bleed into the prompt. All loaded files contribute to the system prompt and to `status --output-format json` as `workspace.memory_files:[{path, source, origin, scope_path, outside_project, chars, contributes}]`; `claw doctor --output-format json` includes a `memory` check so automation can detect loaded and unexpected unloaded memory-file candidates without parsing prompt text.
+对每个被发现的目录,根级指令文件优先级为 `CLAUDE.md`、`CLAW.md`、`AGENTS.md`。发现范围在存在 git 根时限于当前 git 根,否则仅限当前目录,避免项目外的过期父级文件悄悄渗入 prompt。所有已加载文件都会进入 system prompt,并出现在 `status --output-format json` 的 `workspace.memory_files:[{path, source, origin, scope_path, outside_project, chars, contributes}]` 中;`claw doctor --output-format json` 包含 `memory` 检查,自动化无需解析 prompt 文本即可发现已加载与意外未加载的记忆文件候选。
 
-By default, `claw` also imports detected rules from common AI coding tools such as Cursor (`.cursorrules`, `.cursor/rules/`), GitHub Copilot (`.github/copilot-instructions.md`), Windsurf, Plandex, and Crush. Control this with `rulesImport` in any settings file:
+默认情况下,`claw` 还会从常见 AI 编码工具导入检测到的规则,如 Cursor(`.cursorrules`、`.cursor/rules/`)、GitHub Copilot(`.github/copilot-instructions.md`)、Windsurf、Plandex 与 Crush。可在任意设置文件中用 `rulesImport` 控制:
 
 ```json
 {
@@ -635,34 +614,34 @@ By default, `claw` also imports detected rules from common AI coding tools such 
 }
 ```
 
-Use `"auto"` (the default) to import every supported framework, `"none"` to load only Claw instruction/rules files, or an array such as `["cursor", "copilot"]` to import selected frameworks.
+`"auto"`(默认)导入所有受支持框架;`"none"` 只加载 Claw 指令/规则文件;也可以用数组如 `["cursor", "copilot"]` 选择导入。
 
-## Mock parity harness
+## Mock 一致性 harness
 
-The workspace includes a deterministic Anthropic-compatible mock service and parity harness.
+workspace 自带确定性的 Anthropic 兼容 mock 服务与一致性 harness。
 
 ```bash
 cd rust
 ./scripts/run_mock_parity_harness.sh
 ```
 
-Manual mock service startup:
+手动启动 mock 服务:
 
 ```bash
 cd rust
 cargo run -p mock-anthropic-service -- --bind 127.0.0.1:0
 ```
 
-## Verification
+## 验证
 
 ```bash
 cd rust
 cargo test --workspace
 ```
 
-## Workspace overview
+## Workspace 概览
 
-Current Rust crates:
+当前的 Rust crate:
 
 - `api`
 - `commands`
@@ -673,3 +652,5 @@ Current Rust crates:
 - `rusty-claude-cli`
 - `telemetry`
 - `tools`
+
+> 注:本文件超过 10000 字符,按预算翻译核心章节;原文中 MCP 校验与 hook 校验的两段超长 JSON 示例做了保留结构、精简字段的节译,完整字段请参见英文原版。

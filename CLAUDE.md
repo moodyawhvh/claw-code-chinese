@@ -1,21 +1,23 @@
+> 🌐 本文档由 [ultraworkers/claw-code](https://github.com/ultraworkers/claw-code) 翻译,英文原版见原项目。
+
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code(claude.ai/code)在本仓库中处理代码时提供指引。
 
-## Detected stack
-- Languages: Rust.
-- Frameworks: none detected from the supported starter markers.
+## 检测到的技术栈
+- 语言:Rust。
+- 框架:未从支持的起始标记中检测到框架。
 
-## Verification
-- Run Rust verification from repo root: `scripts/fmt.sh --check`; for formatting use `scripts/fmt.sh`. Run Rust clippy/tests from `rust/`: `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
-- `src/` and `tests/` are both present; update both surfaces together when behavior changes.
+## 验证
+- 在仓库根目录运行 Rust 验证:`scripts/fmt.sh --check`;格式化用 `scripts/fmt.sh`。在 `rust/` 下运行 clippy/测试:`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace`
+- `src/` 与 `tests/` 同时存在;行为变化时请同步更新两侧。
 
-## Repository shape
-- `rust/` contains the Rust workspace and active CLI/runtime implementation.
-- `src/` contains source files that should stay consistent with generated guidance and tests.
-- `tests/` contains validation surfaces that should be reviewed alongside code changes.
+## 仓库形态
+- `rust/` 存放 Rust workspace 与活跃的 CLI/runtime 实现。
+- `src/` 存放源文件,应与生成的指引和测试保持一致。
+- `tests/` 存放验证面,代码改动时应一并审查。
 
-## Working agreement
-- Prefer small, reviewable changes and keep generated bootstrap files aligned with actual repo workflows.
-- Keep shared defaults in `.claude.json`; reserve `.claude/settings.local.json` for machine-local overrides.
-- Do not overwrite existing `CLAUDE.md` content automatically; update it intentionally when repo workflows change.
+## 协作约定
+- 优先小而可审查的改动,保持生成的引导文件与仓库实际工作流一致。
+- 共享默认值放在 `.claude.json`;`.claude/settings.local.json` 仅用于机器本地覆盖。
+- 不要自动覆盖已有的 `CLAUDE.md` 内容;当仓库工作流变化时,有意识地更新它。
